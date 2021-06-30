@@ -22,41 +22,43 @@ export default class Game {
     resetButton.addEventListener('click', this.#resetGame.bind(this))
     startButton.addEventListener('click', this.#startGame.bind(this))
   }
-  
+
   #resetGame() {
     const columns = +document.getElementById('columns').value;
     const rows = +document.getElementById('rows').value;
     const time = +document.getElementById('time').value;
     const turn = document.getElementById('turn');
     const buttonStart = document.getElementById('start-game')
-    
+
     buttonStart.removeAttribute('disabled');
     turn.style.backgroundColor = 'blue';
-    
+
     this.#finishGame()
     this.#duration = time * 60 * 1000;
     this.#displayTime(this.#duration);
     this.board = new Board(columns, rows);
     this.#currentPlayer = Players.TWO;
-    
+
     this.#agentB?.terminate();
     this.#agentA?.terminate();
+
+    console.clear();
   }
-  
+
   #displayTime(millis) {
     const totalSeconds = millis / 1000;
     const cents = Math.floor(millis / 100 % 10);
     const seconds = Math.floor(totalSeconds % 60);
     const minutes = Math.floor(totalSeconds / 60 % 60);
-    
+
     const timerDisplay = document.getElementById('time-display');
-    timerDisplay.innerHTML = `${minutes}: ${seconds} 0${cents}`;    
+    timerDisplay.innerHTML = `${minutes}: ${seconds} 0${cents}`;
   }
-  
+
   #finishGame(winner) {
     clearInterval(this.#interval);
     clearTimeout(this.#timeout);
-    
+
     this.#agentB?.terminate();
     this.#agentA?.terminate();
 
@@ -70,22 +72,22 @@ export default class Game {
     this.#displayTime(remainingTime);
   }
 
-  #updateTurn(colum) {
+  #updateTurn(column = undefined) {
     const playerA = this.#currentPlayer === Players.ONE;
     const turn = document.getElementById('turn');
 
     this.#currentPlayer = playerA ? Players.TWO : Players.ONE;
     const agent = playerA ? this.#agentA : this.#agentB;
     turn.style.backgroundColor = playerA ? 'blue' : 'red';
-    agent.postMessage(['move', colum]);
+    agent.postMessage(['move', column]);
   }
 
-  #play(player, colum) {
+  #play(player, column = undefined) {
     if (player !== this.#currentPlayer) new Error('Wait your turn');
 
-    const score = this.board.putPieceInColumn(player, colum);
+    const score = this.board.putPieceInColumn(player, column);
     if (score >= 4) this.#finishGame(player);
-    else this.#updateTurn(colum)
+    else this.#updateTurn(column)
   }
 
   #initGameLoop() {
@@ -101,10 +103,10 @@ export default class Game {
     this.#agentB = new Worker(this.#agentSrcB, workerConfig);
     this.#agentA.postMessage(['config', Players.ONE, ...commonConfig]);
     this.#agentB.postMessage(['config', Players.TWO, ...commonConfig]);
-    this.#agentA.onmessage = ({data}) => this.#play(Players.ONE, ...data)
-    this.#agentB.onmessage = ({data}) => this.#play(Players.TWO, ...data)
+    this.#agentA.onmessage = ({ data }) => this.#play(Players.ONE, ...data)
+    this.#agentB.onmessage = ({ data }) => this.#play(Players.TWO, ...data)
   }
-  
+
   #startGame() {
     const now = +new Date();
     this.#endTime = this.#duration + now;

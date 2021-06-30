@@ -1,4 +1,9 @@
 
+export const Players = {
+  ONE: 1,
+  TWO: 2,
+};
+
 export default class RandomAgent {
   constructor() {
     onmessage = this.#onMessage.bind(this);
@@ -8,23 +13,18 @@ export default class RandomAgent {
     this.player = player;
     this.cols = cols;
     this.rows = rows;
-    if (player === 1) {
-      const nextColumn = this.move();
-      postMessage([nextColumn]);
-    }
   }
 
-  #onMessage({data}) {
+  async #onMessage({ data }) {
     const [type, ...payload] = data;
-    switch(type) {
+    switch (type) {
       case 'config':
         this.#setConfig(...payload);
-        try {
-          this.setup(); 
-        } catch(e) {}
-        break;
-      case 'move': 
-        const nextColumn = this.move(...payload);
+        this.setup();
+        if (this.player !== Players.ONE) break;
+      case 'move':
+        const nextColumn = await this.move(...payload);
+        if (!Number.isInteger(nextColumn)) throw new Error(`invalid movement, player: ${this.player} got ${nextColumn}`)
         postMessage([nextColumn]);
         break;
     }

@@ -144,7 +144,7 @@ export default class Board {
     if ( !Object.values(Players).includes(player) ) 
       throw new Error(`${player} is not a valid player. Please use Players constant.`);
     if ( col < 0 || col >= this.cols ) 
-      throw new Error(`Invalid col ${col}. use a value among 0 and ${this.cols}.`);
+      throw new Error(`Invalid col ${col}. use a value between 0 and ${this.cols}.`);
       
     const row = this.#nextFree[col];
     if (row < 0)
