@@ -10,6 +10,7 @@ interface MinimaxNode {
   freeCells: number[],
   player: number,
   board: Board,
+  columnMoved: number,
   children?: string[],
   score?: number,
   nextNode?: string,
@@ -41,12 +42,14 @@ class MinimaxTree {
   
   /**
    * Explores the tree until the deep in param
-   * @param d: max deep to explore
+   * @param maxDeep: max deep to explore
    * @returns Amount of new nodes in the last execution
    */
-  execute = (d: number = 2): number => {
+  execute = (maxDeep: number = 2): number => {
     this.#bornNodes = 0;
-    const a = this.#dfs(this.#currentNode, d)
+    const { deep } = this.#tree[this.#currentNode]
+    const correctedDeep = maxDeep + deep
+    this.#dfs(this.#currentNode, correctedDeep)
     return this.#bornNodes
   }
 
@@ -55,8 +58,33 @@ class MinimaxTree {
    * 
    * @param col next colum to put the piece
    */
-  moveInColumn = (col: number): void => {
+  moveInColumn = (col: number): string => {
+    const currentNode = this.#tree[this.#currentNode];
+    const row = currentNode.freeCells[col];
+    const piece = currentNode.player == Players.ONE ? 'O' : 'X';
+    this.#currentNode = currentNode.id.replaceAt(row * this.#cols + col, piece);
 
+    return this.#currentNode
+  }
+
+  /**
+   * @returns next column to move
+   */
+  getNextMove = (): number => {
+    const currentNode = this.#tree[this.#currentNode];
+    const { nextNode } = currentNode;
+    this.#printBoard(nextNode)
+    const { columnMoved } = this.#tree[nextNode]
+    return columnMoved
+  }
+
+  #printBoard = (id: string): void => {
+    if (!this.#tree[id]) return
+    const { board } = this.#tree[id];
+    const boardFormated = board.map(line => line.join("")).join("\n")
+    log(Array(this.#cols+3).join("-"))
+    log(boardFormated);
+    log(Array(this.#cols+3).join("-"))
   }
 
   #dfs = (id: string, maxDeep: number): Score => {
@@ -119,6 +147,7 @@ class MinimaxTree {
       player: Players.TWO,
       board: this.#boardFromId(id),
       score: 0,
+      columnMoved: -1,
     }
   }
 
@@ -158,7 +187,15 @@ class MinimaxTree {
           ? moveScore
           : currentNode.score
         
-        this.#tree[childId] = { id: childId, board, freeCells, player, deep, score };
+        this.#tree[childId] = { 
+          id: childId, 
+          columnMoved: col, 
+          board, 
+          freeCells, 
+          player, 
+          deep,
+          score
+        };
       }
 
       currentNode.children.push(childId);
@@ -222,15 +259,22 @@ class JCG extends AgentBase {
   }
 
   move(lastMove: number): number {
+    const exploredNodes = this.#minimaxTree.execute(7);
+
     if (this.player === Players.ONE && !this.#movements) {
       this.#movements++;
-      const exploredNodes = this.#minimaxTree.execute(7);
       log("explored Nodes:", exploredNodes)
       const nextMove = Math.floor(Math.random() * this.cols)
       this.#minimaxTree.moveInColumn(nextMove)
+      
       return nextMove;
     }
+    this.#minimaxTree.moveInColumn(lastMove)
+    
     this.#movements++;
+    const nextColumn = this.#minimaxTree.getNextMove()
+    this.#minimaxTree.moveInColumn(nextColumn)
+    return nextColumn
   }
 }
 
