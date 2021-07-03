@@ -10,9 +10,13 @@ export default class Game {
   #agentB;
   #agentSrcA;
   #agentSrcB;
+  #agentNameA
+  #agentNameB
   #currentPlayer;
 
   constructor(agentSrcA, agentSrcB) {
+    this.#agentNameA = agentSrcA;
+    this.#agentNameB = agentSrcB;
     this.#agentSrcA = `agents/${agentSrcA}.js`;
     this.#agentSrcB = `agents/${agentSrcB}.js`;
 
@@ -62,7 +66,8 @@ export default class Game {
     this.#agentB?.terminate();
     this.#agentA?.terminate();
 
-    if (winner) console.log(winner);
+    if (winner === Players.ONE) console.log(this.#agentNameA);
+    else console.log(this.#agentNameB);
   }
 
   #updateTimer() {
@@ -83,7 +88,7 @@ export default class Game {
   }
 
   #play(player, column = undefined) {
-    if (player !== this.#currentPlayer) new Error('Wait your turn');
+    if (player !== this.#currentPlayer) new Error('Wait for your turn');
 
     const score = this.board.putPieceInColumn(player, column);
     if (score >= 4) this.#finishGame(player);

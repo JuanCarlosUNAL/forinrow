@@ -19,6 +19,7 @@ interface MinimaxNode {
 const log = console.log
 const MAX_VALUE = Number.MAX_SAFE_INTEGER
 const MIN_VALUE = Number.MIN_SAFE_INTEGER
+const MAX_DEEP = 8
 
 String.prototype.replaceAt = function (index, replacement) {
   return this.substr(0, index) + replacement + this.substr(index + replacement.length);
@@ -30,6 +31,7 @@ class MinimaxTree {
   #cols: number
   #currentNode: string
   #bornNodes: number;
+  #visitedNodes: number;
 
   constructor(rows: number, cols: number) {
     this.#rows = rows;
@@ -43,14 +45,18 @@ class MinimaxTree {
   /**
    * Explores the tree until the deep in param
    * @param maxDeep: max deep to explore
-   * @returns Amount of new nodes in the last execution
+   * @returns [
+   *  number: anount of new nodes in this exploration, 
+   *  number: visited nodes in this exploration
+   * ]
    */
-  execute = (maxDeep: number = 2): number => {
+  execute = (maxDeep: number = 2): [number, number] => {
     this.#bornNodes = 0;
+    this.#visitedNodes = 0;
     const { deep } = this.#tree[this.#currentNode]
     const correctedDeep = maxDeep + deep
     this.#dfs(this.#currentNode, correctedDeep)
-    return this.#bornNodes
+    return [this.#bornNodes, this.#visitedNodes]
   }
 
   /**
@@ -70,11 +76,14 @@ class MinimaxTree {
   /**
    * @returns next column to move
    */
-  getNextMove = (): number => {
+  getNextMove = (printBoard = false): number => {
     const currentNode = this.#tree[this.#currentNode];
     const { nextNode } = currentNode;
-    this.#printBoard(nextNode)
+    if(printBoard) this.#printBoard(nextNode)
     const { columnMoved } = this.#tree[nextNode]
+    // TODO: solve this error
+    // if (currentNode.freeCells[columnMoved] < 0) 
+    //   debugger
     return columnMoved
   }
 
@@ -88,6 +97,7 @@ class MinimaxTree {
   }
 
   #dfs = (id: string, maxDeep: number): Score => {
+    this.#visitedNodes++;
     const currentNode = this.#tree[id];
     const { deep, score, player } = currentNode;
 
@@ -97,14 +107,14 @@ class MinimaxTree {
         : [-score, deep, id];
     
     let scoreData: Score = player === Players.ONE
-      ? [MIN_VALUE, MAX_VALUE, 'Nan']
-      : [MAX_VALUE, MAX_VALUE, 'Nan']
+      ? [MAX_VALUE, MAX_VALUE, 'Nan']
+      : [MIN_VALUE, MAX_VALUE, 'Nan']
     const children = this.#getChildren(id);
     for(const childId of children) {
       const childScore = this.#dfs(childId, maxDeep)
       scoreData = player === Players.ONE
-        ? this.#maximizeScore(scoreData, childScore)
-        : this.#minimizeScore(scoreData, childScore)
+        ? this.#minimizeScore(scoreData, childScore)
+        : this.#maximizeScore(scoreData, childScore)
         
     }
 
@@ -187,7 +197,7 @@ class MinimaxTree {
           ? moveScore
           : currentNode.score
         
-        this.#tree[childId] = { 
+        this.#tree[childId] = {
           id: childId, 
           columnMoved: col, 
           board, 
@@ -259,11 +269,12 @@ class JCG extends AgentBase {
   }
 
   move(lastMove: number): number {
-    const exploredNodes = this.#minimaxTree.execute(7);
+    const [created, explored] = this.#minimaxTree.execute(!this.#movements ? 4 : MAX_DEEP);
+    // log("created Nodes:", created)
+    // log("explored Nodes:", explored)
 
     if (this.player === Players.ONE && !this.#movements) {
       this.#movements++;
-      log("explored Nodes:", exploredNodes)
       const nextMove = Math.floor(Math.random() * this.cols)
       this.#minimaxTree.moveInColumn(nextMove)
       
